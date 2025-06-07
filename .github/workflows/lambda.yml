@@ -20,7 +20,7 @@ jobs:
     - name: Install and Package App
       run: |
         mkdir -p build
-        pip install -r requirements/lambda -t build/
+        pip install -r src/requirements/lambda.txt -t build/
         cp app.py wsgi_handler.py build/
         cd build && zip -r ../lambda.zip .
 
