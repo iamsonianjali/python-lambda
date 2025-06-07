@@ -21,7 +21,7 @@ jobs:
       run: |
         mkdir -p build
         pip install -r src/requirements/lambda.txt -t build/
-        cp app.py wsgi_handler.py build/
+        #cp app.py wsgi_handler.py build/
         cd build && zip -r ../lambda.zip .
 
     - name: Configure AWS Credentials
