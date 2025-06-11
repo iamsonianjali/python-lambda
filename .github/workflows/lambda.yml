@@ -1,4 +1,4 @@
-name: Deploy Lambda Function
+name: Deploy Lambda Function & Layer
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout Code
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -17,19 +17,48 @@ jobs:
       with:
         python-version: 3.13
 
+    # 🧱 Install dependencies and build the python layer
+    - name: Build Lambda Layer from requirements.txt
+      run: |
+        rm -rf python python.zip
+        mkdir -p python
+        pip install -r requirements.txt -t python/
+        zip -r python.zip python
+
+    # 📦 Zip Lambda function code
     - name: Zip Lambda Function Code
       run: |
         zip -r function.zip lambda_function.py
 
+    # 🔐 Configure AWS credentials
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-south-1  # or your region
+        aws-region: ap-south-1
 
-    - name: Deploy to Lambda
+    # 🚀 Publish new Lambda Layer version
+    - name: Publish Lambda Layer
+      id: publish_layer
+      run: |
+        LAYER_ARN=$(aws lambda publish-layer-version \
+          --layer-name dynamic-python-layer \
+          --zip-file fileb://python.zip \
+          --compatible-runtimes python3.13 \
+          --output json | jq -r '.LayerVersionArn')
+        echo "LAYER_ARN=$LAYER_ARN" >> $GITHUB_ENV
+
+    # 🔄 Deploy updated Lambda function code
+    - name: Deploy Lambda Function Code
       run: |
         aws lambda update-function-code \
           --function-name report-request-builder-1 \
           --zip-file fileb://function.zip
+
+    # 🔗 Attach latest Layer version to Lambda
+    - name: Update Lambda Function to use latest Layer
+      run: |
+        aws lambda update-function-configuration \
+          --function-name report-request-builder-1 \
+          --layers ${{ env.LAYER_ARN }}
