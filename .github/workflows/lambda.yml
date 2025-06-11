@@ -1,9 +1,8 @@
-name: Deploy Flask Lambda
+name: Deploy Lambda Function
 
 on:
   push:
-    branches: [main]
-
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -16,25 +15,21 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: 3.13
 
-    - name: Install and Package App
+    - name: Zip Lambda Function Code
       run: |
-        mkdir -p build
-        pip install -r src/requirements/lambda.txt -t build/
-        #cp app.py wsgi_handler.py build/
-        cd build && zip -r ../lambda.zip .
+        zip -r function.zip lambda_function.py
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-south-1
+        aws-region: ap-south-1  # or your region
 
-    - name: Deploy to AWS Lambda
+    - name: Deploy to Lambda
       run: |
         aws lambda update-function-code \
-          --function-name testDemo \
-          --zip-file fileb://lambda.zip
-
+          --function-name report-request-builder-1 \
+          --zip-file fileb://function.zip
